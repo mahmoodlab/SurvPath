@@ -1,9 +1,9 @@
 # Modeling Dense Multimodal Interactions Between Biological Pathways and Histology for Survival Prediction
 [HTML](https://arxiv.org/abs/2304.06819)
 
-***Guillaume Jaume*, Anurag Vaidya*, Richard Chen, Drew Williamson, Paul Liang, Faisal Mahmood***
+***Guillaume Jaume^, Anurag Vaidya^, Richard Chen, Drew Williamson, Paul Liang, Faisal Mahmood***
 
-* Contributed equally
+^ Contributed equally
 
 **Summary:**   Integrating whole-slide images (WSIs) and bulk transcriptomics for predicting patient survival can improve our understanding of patient prognosis. However, this multimodal task is particularly challenging due to the different nature of these data: WSIs represent a very high-dimensional spatial description of a tumor, while bulk transcriptomics represent a global description of gene expression levels within that tumor. In this context, our work aims to address two key challenges: (1) how can we tokenize transcriptomics in a semantically meaningful and interpretable way?, and (2) how can we capture dense multimodal interactions between these two modalities? Specifically, we propose to learn biological pathway tokens from transcriptomics that can encode specific cellular functions. Together with histology patch tokens that encode the different morphological patterns in the WSI, we argue that they form appropriate reasoning units for downstream interpretability analyses. We propose fusing both modalities using a memory-efficient multimodal Transformer that can model interactions between pathway and histology patch tokens. Our proposed model, SurvPath, achieves state-of-the-art performance when evaluated against both unimodal and multimodal baselines on five datasets from The Cancer Genome Atlas. Our interpretability framework identifies key multimodal prognostic factors, and, as such, can provide valuable insights into the interaction between genotype and phenotype, enabling a deeper understanding of the underlying biological mechanisms at play.
 
