@@ -15,23 +15,24 @@
 
 ### Downloading TCGA Data and Pathways Compositions 
 To download diagnostic WSIs (formatted as .svs files), molecular feature data and other clinical metadata, please refer  to the [NIH Genomic Data Commons Data Portal](https://portal.gdc.cancer.gov)and the [cBioPortal](https://www.cbioportal.org/). WSIs for each cancer type can be downloaded using the [GDC Data Transfer Tool](https://docs.gdc.cancer.gov/Data_Transfer_Tool/Users_Guide/Data_Download_and_Upload/). To get the pathway compositions for 50 Hallmarks, refer to [MsigDB](https://www.gsea-msigdb.org/gsea/msigdb/human/genesets.jsp?collection=H). To get the Reactome pathway compositions, refer to [PARADIGM](http://paradigm.five3genomics.com)
-##### Processing Whole Slide Images 
+
+## Processing Whole Slide Images 
 To process Whole Slide Images (WSIs), first, the tissue regions in each biopsy slide are segmented using Otsu's Segmentation on a downsampled WSI using OpenSlide. The 256 x 256 patches without spatial overlapping are extracted from the segmented tissue regions at the desired magnification. Consequently, an SSL pretrained Swin Transformer [TransPath](https://github.com/Xiyue-Wang/TransPath) is used to encode raw image patches into 768-dim feature vectors, which we then save as .pt files for each WSI. The extracted features then serve as input (in a .pt file) to the network. 
 
-### Transcriptomics and Pathway Compositions
+## Transcriptomics and Pathway Compositions
 We downloaded raw RNA-seq abundance data for the TCGA cohorts from the [Xena database](https://www.nature.com/articles/s41587-020-0546-8) and performed normalization in the dataset class. The raw data is included as CSV files in @TODO. Xena database was also used to access disease specific survival and associated censorhsip. Using the Reactome and MSigDB Hallmarks pathway compositions, we selected pathways that had more than 90% of transcriptomics data available. The compositions can be found at @TODO.  
 
-### Training-Validation Splits 
+## Training-Validation Splits 
 For evaluating the algorithm's performance, we  partitioned each dataset using 5-fold cross-validation (stratified by the site of histology slide collection). Splits for each cancer type are found in the @TODO folder, which each contain **splits_{k}.csv** for k = 1 to 5. In each **splits_{k}.csv**, the first column corresponds to the TCGA Case IDs used for training, and the second column corresponds to the TCGA Case IDs used for validation. Slides from one case are not distributed across training and validation sets. Alternatively, one could define their own splits, however, the files would need to be defined in this format. The dataset loader for using these train-val splits are defined in the `return_splits` function in the `SurvivalDatasetFactory`.
 
-### Running Experiments 
+## Running Experiments 
 Refer to @TODO folder for source files to train SurvPath and the baselines presented in the paper. Refer to the paper to find the hyperparameters required for training. 
 
-### Issues 
+## Issues 
 - Please open new threads or report issues directly (for urgent blockers) to `avaidya@mit.edu`.
 - Immediate response to minor issues may not be available.
 
-### License and Usage 
+## License and Usage 
 If you find our work useful in your research, please consider citing our paper at:
 
 ```
@@ -42,5 +43,4 @@ If you find our work useful in your research, please consider citing our paper a
   year={2023}
 }
 ```
-
-&copy [Mahmood Lab](https://faisal.ai) - This code is made available under the GPLv3 License and is available for non-commercial academic purposes.
+[Mahmood Lab](https://faisal.ai) - This code is made available under the GPLv3 License and is available for non-commercial academic purposes.
