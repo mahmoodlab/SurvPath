@@ -1,5 +1,6 @@
-# Modeling Dense Multimodal Interactions Between Biological Pathways and Histology for Survival Prediction
-[HTML](https://arxiv.org/abs/2304.06819)
+# Code for Modeling Dense Multimodal Interactions Between Biological Pathways and Histology for Survival Prediction
+
+Welcome to the official GitHub repository for our CVPR 2024 paper, "Modeling Dense Multimodal Interactions Between Biological Pathways and Histology for Survival Prediction". This project was developed by the [Mahmood Lab](https://faisal.ai/) at Harvard Medical School and Brigham and Women's Hospital. Preprint can be accessed [here](https://arxiv.org/abs/2304.06819).
 
 ***Guillaume Jaume^, Anurag Vaidya^, Richard Chen, Drew Williamson, Paul Liang, Faisal Mahmood***
 
@@ -28,7 +29,7 @@ We downloaded raw RNA-seq abundance data for the TCGA cohorts from the [Xena dat
 For evaluating the algorithm's performance, we  partitioned each dataset using 5-fold cross-validation (stratified by the site of histology slide collection). Splits for each cancer type are found in the [`splits`](https://github.com/ajv012/SurvPath/tree/main/splits/5foldcv) folder, which each contain **splits_{k}.csv** for k = 1 to 5. In each **splits_{k}.csv**, the first column corresponds to the TCGA Case IDs used for training, and the second column corresponds to the TCGA Case IDs used for validation. Slides from one case are not distributed across training and validation sets. Alternatively, one could define their own splits, however, the files would need to be defined in this format. The dataset loader for using these train-val splits are defined in the `return_splits` function in the `SurvivalDatasetFactory`.
 
 ## Running Experiments 
-Refer to [`scripts`](https://github.com/ajv012/SurvPath/tree/main/scripts) folder for source files to train SurvPath and the baselines presented in the paper. Refer to the paper to find the hyperparameters required for training. 
+Refer to [`scripts`]([https://github.com/ajv012/SurvPath/tree/main/scripts](https://github.com/mahmoodlab/SurvPath/tree/main/scripts)) folder for source files to train SurvPath and the baselines presented in the paper. Refer to the paper to find the hyperparameters required for training. 
 
 ## Issues 
 - Please open new threads or report issues directly (for urgent blockers) to `avaidya@mit.edu`.
