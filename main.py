@@ -89,8 +89,8 @@ if __name__ == "__main__":
         label_col=args.label_col, 
         eps=1e-6,
         num_patches=args.num_patches,
-        is_mcat = True if args.modality == "coattn" else False,
-        is_survapth = True if args.modality == "survpath" else False,
+        is_mcat = True if "coattn" in args.modality else False,
+        is_survpath = True if args.modality == "survpath" else False,
         type_of_pathway=args.type_of_path)
 
     #---> perform the experiment

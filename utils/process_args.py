@@ -29,6 +29,9 @@ def _process_args():
     parser.add_argument('--num_patches', type=int, default=4000, help='number of patches')
     parser.add_argument('--label_col', type=str, default="survival_months_dss", help='type of survival (OS, DSS, PFI)')
     parser.add_argument("--wsi_projection_dim", type=int, default=1)
+    parser.add_argument("--encoding_layer_1_dim", type=int, default=8)
+    parser.add_argument("--encoding_layer_2_dim", type=int, default=16)
+    parser.add_argument("--encoder_dropout", type=float, default=0.25)
 
     #----> split related 
     parser.add_argument('--k', type=int, default=5, help='number of folds (default: 10)')
@@ -50,11 +53,14 @@ def _process_args():
                         help='survival loss function (default: ce)')
     parser.add_argument('--alpha_surv', type=float, default=0.0, help='weight given to uncensored patients')
     parser.add_argument('--reg', type=float, default=1e-5, help='weight decay / L2 (default: 1e-5)')
-    
+    parser.add_argument('--lr_scheduler', type=str, default='cosine')
+    parser.add_argument('--warmup_epochs', type=int, default=1)
+
     #---> model related
     parser.add_argument('--fusion', type=str, default=None)
     parser.add_argument('--modality', type=str, default="wsi")
     parser.add_argument('--encoding_dim', type=int, default=768, help='WSI encoding dim')
+    parser.add_argument('--use_nystrom', action='store_true', default=False, help='Use Nystrom attentin in SurvPath.')
 
     args = parser.parse_args()
 

@@ -42,7 +42,7 @@ class SurvPath(nn.Module):
     def __init__(
         self, 
         omic_sizes=[100, 200, 300, 400, 500, 600],
-        wsi_embedding_dim=768,
+        wsi_embedding_dim=1024,
         dropout=0.1,
         num_classes=4,
         wsi_projection_dim=256,
@@ -118,7 +118,7 @@ class SurvPath(nn.Module):
         return_attn = kwargs["return_attn"]
         
         #---> get pathway embeddings 
-        h_omic = [self.sig_networks[idx].forward(sig_feat) for idx, sig_feat in enumerate(x_omic)] ### each omic signature goes through it's own FC layer
+        h_omic = [self.sig_networks[idx].forward(sig_feat.float()) for idx, sig_feat in enumerate(x_omic)] ### each omic signature goes through it's own FC layer
         h_omic_bag = torch.stack(h_omic).unsqueeze(0) ### omic embeddings are stacked (to be used in co-attention)
 
         #---> project wsi to smaller dimension (same as pathway dimension)

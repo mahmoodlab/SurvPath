@@ -35,7 +35,7 @@ class DeepMISL(nn.Module):
         """
         super(DeepMISL, self).__init__()
         self.fusion = fusion
-        self.size_dict_path = {"small": [768, 512, 256], "big": [1024, 512, 384]}
+        self.size_dict_path = {"small": [1024, 512, 256], "big": [1024, 512, 384]}
         self.size_dict_omic = {'small': [256, 256]}
 
         ### Deep Sets Architecture Construction

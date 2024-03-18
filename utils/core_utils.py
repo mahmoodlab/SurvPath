@@ -13,8 +13,16 @@ from models.model_MCATPathways import MCATPathways
 from models.model_SurvPath import SurvPath
 from models.model_SurvPath_with_nystrom import SurvPath_with_nystrom
 from models.model_TMIL import TMIL
+from models.model_motcat import MCATPathwaysMotCat
 from sksurv.metrics import concordance_index_censored, concordance_index_ipcw, brier_score, integrated_brier_score, cumulative_dynamic_auc
 from sksurv.util import Surv
+
+from transformers import (
+    get_constant_schedule_with_warmup, 
+    get_linear_schedule_with_warmup, 
+    get_cosine_schedule_with_warmup
+)
+
 
 #----> pytorch imports
 import torch
@@ -186,6 +194,14 @@ def _init_model(args):
         model_dict = {'fusion': args.fusion, 'omic_sizes': args.omic_sizes, 'n_classes': args.n_classes}
         model = MCATPathways(**model_dict)
 
+    elif args.modality == "coattn_motcat":
+
+        model_dict = {
+            'fusion': args.fusion, 'omic_sizes': args.omic_sizes, 'n_classes': args.n_classes,
+            "ot_reg":0.1, "ot_tau":0.5, "ot_impl":"pot-uot-l2"
+        }
+        model = MCATPathwaysMotCat(**model_dict)
+
     # survpath 
     elif args.modality == "survpath":
 
@@ -302,7 +318,7 @@ def _unpack_data(modality, device, data):
 
         y_disc, event_time, censor, clinical_data_list = data[2], data[3], data[4], data[5]
 
-    elif modality in ["coattn"]:
+    elif modality in ["coattn", "coattn_motcat"]:
         
         data_WSI = data[0].to(device)
         data_omic1 = data[1].type(torch.FloatTensor).to(device)
@@ -358,7 +374,7 @@ def _process_data_and_forward(model, modality, device, data):
     """
     data_WSI, mask, y_disc, event_time, censor, data_omics, clinical_data_list, mask = _unpack_data(modality, device, data)
 
-    if modality == "coattn":  
+    if modality in ["coattn", "coattn_motcat"]:  
         
         out = model(
             x_path=data_WSI, 
@@ -369,8 +385,8 @@ def _process_data_and_forward(model, modality, device, data):
             x_omic5=data_omics[4], 
             x_omic6=data_omics[5]
             )  
-        
-    elif modality == "coattn_sa":
+
+    elif modality == 'survpath':
 
         input_args = {"x_path": data_WSI.to(device)}
         for i in range(len(data_omics)):
@@ -433,7 +449,7 @@ def _update_arrays(all_risk_scores, all_censorships, all_event_times, all_clinic
     all_clinical_data.append(clinical_data_list)
     return all_risk_scores, all_censorships, all_event_times, all_clinical_data
 
-def _train_loop_survival(epoch, model, modality, loader, optimizer, loss_fn):
+def _train_loop_survival(epoch, model, modality, loader, optimizer, scheduler, loss_fn):
     r"""
     Perform one epoch of training 
 
@@ -478,8 +494,8 @@ def _train_loop_survival(epoch, model, modality, loader, optimizer, loss_fn):
         total_loss += loss_value 
 
         loss.backward()
-
         optimizer.step()
+        scheduler.step()
 
         if (batch_idx % 20) == 0:
             print("batch: {}, loss: {:.3f}".format(batch_idx, loss.item()))
@@ -605,12 +621,11 @@ def _summary(dataset_factory, model, modality, loader, loss_fn, survival_train=N
     slide_ids = loader.dataset.metadata['slide_id']
     count = 0
     with torch.no_grad():
-
         for data in loader:
 
             data_WSI, mask, y_disc, event_time, censor, data_omics, clinical_data_list, mask = _unpack_data(modality, device, data)
 
-            if modality == "coattn":  
+            if modality in ["coattn", "coattn_motcat"]:  
                 h = model(
                     x_path=data_WSI, 
                     x_omic1=data_omics[0], 
@@ -619,7 +634,7 @@ def _summary(dataset_factory, model, modality, loader, loss_fn, survival_train=N
                     x_omic4=data_omics[3], 
                     x_omic5=data_omics[4], 
                     x_omic6=data_omics[5]
-                    )  
+                )  
             elif modality == "survpath":
 
                 input_args = {"x_path": data_WSI.to(device)}
@@ -673,7 +688,36 @@ def _summary(dataset_factory, model, modality, loader, loss_fn, survival_train=N
 
     return patient_results, c_index, c_index2, BS, IBS, iauc, total_loss
 
-def _step(cur, args, loss_fn, model, optimizer, train_loader, val_loader):
+
+def _get_lr_scheduler(args, optimizer, dataloader):
+    scheduler_name = args.lr_scheduler
+    warmup_epochs = args.warmup_epochs
+    epochs = args.max_epochs if hasattr(args, 'max_epochs') else args.epochs
+
+    if warmup_epochs > 0:
+        warmup_steps = warmup_epochs * len(dataloader)
+    else:
+        warmup_steps = 0
+    if scheduler_name=='constant':
+        lr_scheduler = get_constant_schedule_with_warmup(
+            optimizer=optimizer,
+            num_warmup_steps=warmup_steps
+        )
+    elif scheduler_name=='cosine':
+        lr_scheduler = get_cosine_schedule_with_warmup(
+            optimizer=optimizer,
+            num_warmup_steps=warmup_steps,
+            num_training_steps=len(dataloader) * epochs,
+        )
+    elif scheduler_name=='linear':
+        lr_scheduler = get_linear_schedule_with_warmup(
+            optimizer=optimizer,
+            num_warmup_steps=warmup_steps,
+            num_training_steps=len(dataloader) * epochs,
+        )
+    return lr_scheduler
+
+def _step(cur, args, loss_fn, model, optimizer, scheduler, train_loader, val_loader):
     r"""
     Trains the model for the set number of epochs and validates it.
     
@@ -683,6 +727,7 @@ def _step(cur, args, loss_fn, model, optimizer, train_loader, val_loader):
         - loss_fn
         - model
         - optimizer
+        - lr scheduler 
         - train_loader
         - val_loader
         
@@ -699,19 +744,21 @@ def _step(cur, args, loss_fn, model, optimizer, train_loader, val_loader):
     all_survival = _extract_survival_metadata(train_loader, val_loader)
     
     for epoch in range(args.max_epochs):
-        _train_loop_survival(epoch, model, args.modality, train_loader, optimizer, loss_fn)
-    
+        _train_loop_survival(epoch, model, args.modality, train_loader, optimizer, scheduler, loss_fn)
+        # _, val_cindex, _, _, _, _, total_loss = _summary(args.dataset_factory, model, args.modality, val_loader, loss_fn, all_survival)
+        # print('Val loss:', total_loss, ', val_c_index:', val_cindex)
     # save the trained model
     torch.save(model.state_dict(), os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur)))
     
     results_dict, val_cindex, val_cindex_ipcw, val_BS, val_IBS, val_iauc, total_loss = _summary(args.dataset_factory, model, args.modality, val_loader, loss_fn, all_survival)
     
-    print('Final Val c-index: {:.4f} | Final Val c-index2: {:.4f} | Final Val IBS: {:.4f} | Final Val iauc: {:.4f}'.format(
-        val_cindex, 
-        val_cindex_ipcw,
-        val_IBS,
-        val_iauc
-        ))
+    print('Final Val c-index: {:.4f}'.format(val_cindex))
+    # print('Final Val c-index: {:.4f} | Final Val c-index2: {:.4f} | Final Val IBS: {:.4f} | Final Val iauc: {:.4f}'.format(
+    #     val_cindex, 
+    #     val_cindex_ipcw,
+    #     val_IBS,
+    #     val_iauc
+    #     ))
 
     return results_dict, (val_cindex, val_cindex_ipcw, val_BS, val_IBS, val_iauc, total_loss)
 
@@ -741,15 +788,18 @@ def _train_val(datasets, cur, args):
     loss_fn = _init_loss_function(args)
 
     #----> init model
-    model = _init_model(args, cur)
+    model = _init_model(args)
     
     #---> init optimizer
     optimizer = _init_optim(args, model)
-    
+
     #---> init loaders
     train_loader, val_loader = _init_loaders(args, train_split, val_split)
 
+    # lr scheduler 
+    lr_scheduler = _get_lr_scheduler(args, optimizer, train_loader)
+
     #---> do train val
-    results_dict, (val_cindex, val_cindex2, val_BS, val_IBS, val_iauc, total_loss) = _step(cur, args, loss_fn, model, optimizer, train_loader, val_loader)
+    results_dict, (val_cindex, val_cindex2, val_BS, val_IBS, val_iauc, total_loss) = _step(cur, args, loss_fn, model, optimizer, lr_scheduler, train_loader, val_loader)
 
     return results_dict, (val_cindex, val_cindex2, val_BS, val_IBS, val_iauc, total_loss)

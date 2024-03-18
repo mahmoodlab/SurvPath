@@ -27,8 +27,9 @@ class TMIL(nn.Module):
             n_classes (int): Output shape of NN
         """
         super(TMIL, self).__init__()
+        self.device = device
         self.fusion = fusion
-        self.size_dict_path = {"small": [768, 256, 256], "big": [768, 512, 384]}
+        self.size_dict_path = {"small": [1024, 256, 256], "big": [1024, 512, 384]}
         self.size_dict_omic = {'small': [256, 256]}
 
         ### Deep Sets Architecture Construction
@@ -77,20 +78,16 @@ class TMIL(nn.Module):
             else:
                 self.mm = None
 
+            self.fc_1_weight.to(self.device)
+            self.fc_1_bias.to(self.device)
+            self.mask_1 = self.mask_1.to(self.device)
+            self.fc_2_weight.to(self.device)
+            self.fc_2_bias.to(self.device)
+            self.mask_2 = self.mask_2.to(self.device)
+            self.mm = self.mm.to(self.device)
+
         self.classifier = nn.Linear(size[2], n_classes)
-
-        self.device = device
-        self.fc_1_weight.to(self.device)
-        self.fc_1_bias.to(self.device)
-        self.mask_1 = self.mask_1.to(self.device)
-
-        self.fc_2_weight.to(self.device)
-        self.fc_2_bias.to(self.device)
-        self.mask_2 = self.mask_2.to(self.device)
-
-        self.mm = self.mm.to(self.device)
         self.classifier = self.classifier.to(self.device)
-
         self.activation = nn.ReLU()
 
         #---> nystrom 

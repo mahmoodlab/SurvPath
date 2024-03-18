@@ -31,7 +31,7 @@ class MCATPathways(nn.Module):
         self.fusion = fusion
         self.omic_sizes = omic_sizes
         self.n_classes = n_classes
-        self.size_dict_WSI = {"small": [768, 256, 256], "big": [1024, 512, 384]}
+        self.size_dict_WSI = {"small": [1024, 256, 256], "big": [1024, 512, 384]}
         self.size_dict_omic = {'small': [256, 256], 'big': [1024, 1024, 1024, 256]}
         
         ### FC Layer over WSI bag

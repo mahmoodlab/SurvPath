@@ -1,14 +1,6 @@
-#----> internal imports
-from tabnanny import verbose
-from utils.radam import RAdam
-from utils.lamb import Lamb
-
 #----> general imports
-import pickle
-from unittest import result
 import torch
 import numpy as np
-import dgl 
 import torch.nn as nn
 import pdb
 import os
@@ -17,14 +9,7 @@ import pandas as pd
 import torch
 import numpy as np
 import torch.nn as nn
-from torchvision import transforms
 from torch.utils.data import DataLoader, Sampler, WeightedRandomSampler, RandomSampler, SequentialSampler, sampler
-import torch.optim as optim
-import torch.nn.functional as F
-import math
-from itertools import islice
-import collections
-from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -64,7 +49,7 @@ def _prepare_for_experiment(args):
                 'lr': args.lr,
                 'experiment': args.study,
                 'reg': args.reg,
-                'label_frac': args.label_frac,
+                # 'label_frac': args.label_frac,
                 'bag_loss': args.bag_loss,
                 'seed': args.seed,
                 'weighted_sample': args.weighted_sample,
@@ -79,7 +64,7 @@ def _prepare_for_experiment(args):
     _print_and_log_experiment(args, settings)
 
     #---> load composition df 
-    composition_df = pd.read_csv("./datasets_csv/mlp_per_pathway/{}_comps.csv".format(args.type_of_path), index_col=0)
+    composition_df = pd.read_csv("./datasets_csv/pathway_compositions/{}_comps.csv".format(args.type_of_path), index_col=0)
     composition_df.sort_index(inplace=True)
     args.composition_df = composition_df
 
@@ -108,8 +93,6 @@ def _print_and_log_experiment(args, settings):
         print("{}:  {}".format(key, val))
     print("")
 
-
-
 def _get_custom_exp_code(args):
     r"""
     Updates the argparse.NameSpace with a custom experiment code.
@@ -135,11 +118,11 @@ def _get_custom_exp_code(args):
     param_code += '_lr%s' % format(args.lr, '.0e')
 
     #----> Regularization
-    if args.reg_type == 'L1':
-      param_code += '_%sreg%s' % (args.reg_type, format(args.reg, '.0e'))
+    # if args.reg_type == 'L1':
+    #   param_code += '_%sreg%s' % (args.reg_type, format(args.reg, '.0e'))
 
-    if args.reg and args.reg_type == "L2":
-        param_code += "_l2Weight_{}".format(args.reg)
+    # if args.reg and args.reg_type == "L2":
+    param_code += "_l2Weight_{}".format(args.reg)
 
     param_code += '_%s' % args.which_splits.split("_")[0]
 
@@ -149,11 +132,11 @@ def _get_custom_exp_code(args):
     # label col 
     param_code += "_" + args.label_col
 
-    param_code += "_dim1_" + str(args.encoding_layer_1_dim)
-    param_code += "_dim2_" + str(args.encoding_layer_2_dim)
+    param_code += "_dim1_" + str(args.encoding_dim)
+    # param_code += "_dim2_" + str(args.encoding_layer_2_dim)
     
     param_code += "_patches_" + str(args.num_patches)
-    param_code += "_dropout_" + str(args.encoder_dropout)
+    # param_code += "_dropout_" + str(args.encoder_dropout)
 
     param_code += "_wsiDim_" + str(args.wsi_projection_dim)
     param_code += "_epochs_" + str(args.max_epochs)
@@ -203,7 +186,7 @@ def _create_results_dir(args):
     """
     args.results_dir = os.path.join("./results", args.results_dir) # create an experiment specific subdir in the results dir 
     if not os.path.isdir(args.results_dir):
-        os.mkdir(args.results_dir)
+        os.makedirs(args.results_dir, exist_ok=True)
         #---> add gitignore to results dir
         f = open(os.path.join(args.results_dir, ".gitignore"), "w")
         f.write("*\n")
@@ -505,9 +488,9 @@ def _get_split_loader(args, split_dataset, training = False, testing = False, we
     
     if args.modality in ["omics", "snn", "mlp_per_path"]:
         collate_fn = _collate_omics
-    elif args.modality in ["abmil_wsi", "abmil_wsi_pathways", "deepmisl_wsi", "deepmisl_wsi_pathways" "mlp_wsi", "transmil_wsi", "transmil_wsi_pathways"]:
+    elif args.modality in ["abmil_wsi", "abmil_wsi_pathways", "deepmisl_wsi", "deepmisl_wsi_pathways", "mlp_wsi", "transmil_wsi", "transmil_wsi_pathways"]:
         collate_fn = _collate_wsi_omics
-    elif args.modality in ["coattn"]:
+    elif args.modality in ["coattn", "coattn_motcat"]:  
         collate_fn = _collate_MCAT
     elif args.modality == "survpath":
          collate_fn = _collate_survpath 

@@ -35,8 +35,9 @@ class ABMIL(nn.Module):
             n_classes (int): Output shape of NN
         """
         super(ABMIL, self).__init__()
+        self.device = device
         self.fusion = fusion
-        self.size_dict_path = {"small": [768, 256, 256], "big": [768, 512, 384]}
+        self.size_dict_path = {"small": [1024, 256, 256], "big": [1024, 512, 384]}
         self.size_dict_omic = {'small': [256, 256]}
 
         ### Deep Sets Architecture Construction
@@ -59,13 +60,11 @@ class ABMIL(nn.Module):
             self.num_pathways = self.df_comp.shape[1]
             M_raw = torch.Tensor(self.df_comp.values)
             self.mask_1 = torch.repeat_interleave(M_raw, self.dim_per_path_1, dim=1)
-
             self.fc_1_weight = nn.init.xavier_normal_(nn.Parameter(torch.FloatTensor(self.input_dim, self.dim_per_path_1*self.num_pathways)))
             self.fc_1_bias = nn.Parameter(torch.rand(self.dim_per_path_1*self.num_pathways))
 
             self.fc_2_weight = nn.init.xavier_normal_(nn.Parameter(torch.FloatTensor(self.dim_per_path_1*self.num_pathways, self.dim_per_path_2*self.num_pathways)))
             self.fc_2_bias = nn.Parameter(torch.rand(self.dim_per_path_2*self.num_pathways))
-
             self.mask_2 = np.zeros([self.dim_per_path_1*self.num_pathways, self.dim_per_path_2*self.num_pathways])
             for (row, col) in zip(range(0, self.dim_per_path_1*self.num_pathways, self.dim_per_path_1), range(0, self.dim_per_path_2*self.num_pathways, self.dim_per_path_2)):
                 self.mask_2[row:row+self.dim_per_path_1, col:col+self.dim_per_path_2] = 1
@@ -83,23 +82,18 @@ class ABMIL(nn.Module):
                 self.mm = BilinearFusion(dim1=256, dim2=256, scale_dim1=8, scale_dim2=8, mmhid=256)
             else:
                 self.mm = None
+            self.activation = nn.ReLU()
+
+            self.fc_1_weight.to(self.device)
+            self.fc_1_bias.to(self.device)
+            self.mask_1 = self.mask_1.to(self.device)
+            self.fc_2_weight.to(self.device)
+            self.fc_2_bias.to(self.device)
+            self.mask_2 = self.mask_2.to(self.device)
+            self.mm = self.mm.to(self.device)
 
         self.classifier = nn.Linear(size[2], n_classes)
-
-        self.device = device
-        self.fc_1_weight.to(self.device)
-        self.fc_1_bias.to(self.device)
-        self.mask_1 = self.mask_1.to(self.device)
-
-        self.fc_2_weight.to(self.device)
-        self.fc_2_bias.to(self.device)
-        self.mask_2 = self.mask_2.to(self.device)
-
-        self.mm = self.mm.to(self.device)
         self.classifier = self.classifier.to(self.device)
-
-        self.activation = nn.ReLU()
-
 
     def relocate(self):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

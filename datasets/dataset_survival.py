@@ -583,7 +583,7 @@ class SurvivalDatasetFactory:
             patient_dict=args.dataset_factory.patient_dict,
             metadata=df_metadata_slide,
             omics_data_dict=omics_data_for_split,
-            data_dir= os.path.join(args.data_root_dir, "{}_20x_features".format(args.combined_study)),
+            data_dir=args.data_root_dir,  # os.path.join(args.data_root_dir, "{}_20x_features".format(args.combined_study)),
             num_classes=self.num_classes,
             label_col = self.label_col,
             censorship_var = self.censorship_var,
@@ -596,7 +596,7 @@ class SurvivalDatasetFactory:
             )
 
         if split_key == "train":
-            return split_dataset, scaler, None
+            return split_dataset, scaler
         else:
             return split_dataset
     
@@ -708,7 +708,7 @@ class SurvivalDataset(Dataset):
             #@HACK: returning case_id, remove later
             return (patch_features, omics_tensor, label, event_time, c, clinical_data, mask)
 
-        elif self.modality == "coattn":
+        elif self.modality in ["coattn", "coattn_motcat"]:
             
             patch_features, mask = self._load_wsi_embs_from_path(self.data_dir, slide_ids)
 
@@ -775,7 +775,7 @@ class SurvivalDataset(Dataset):
         patch_features = []
         # load all slide_ids corresponding for the patient
         for slide_id in slide_ids:
-            wsi_path = os.path.join(data_dir, 'pt_files', '{}.pt'.format(slide_id.rstrip('.svs')))
+            wsi_path = os.path.join(data_dir, '{}.pt'.format(slide_id.rstrip('.svs')))
             wsi_bag = torch.load(wsi_path)
             patch_features.append(wsi_bag)
         patch_features = torch.cat(patch_features, dim=0)
